@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+        <title>Babylon.js sample code</title>
+
+        <!-- Babylon.js -->
+        <script src="https://code.jquery.com/pep/0.4.2/pep.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.min.js"></script>
+        <script src="https://preview.babylonjs.com/ammo.js"></script>
+        <script src="https://preview.babylonjs.com/cannon.js"></script>
+        <script src="https://preview.babylonjs.com/Oimo.js"></script>
+        <script src="https://preview.babylonjs.com/libktx.js"></script>
+        <script src="https://preview.babylonjs.com/earcut.min.js"></script>
+        <script src="https://preview.babylonjs.com/babylon.js"></script>
+        <script src="https://preview.babylonjs.com/inspector/babylon.inspector.bundle.js"></script>
+        <script src="https://preview.babylonjs.com/materialsLibrary/babylonjs.materials.min.js"></script>
+        <script src="https://preview.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.min.js"></script>
+        <script src="https://preview.babylonjs.com/postProcessesLibrary/babylonjs.postProcess.min.js"></script>
+        <script src="https://preview.babylonjs.com/loaders/babylonjs.loaders.js"></script>
+        <script src="https://preview.babylonjs.com/serializers/babylonjs.serializers.min.js"></script>
+        <script src="https://preview.babylonjs.com/gui/babylon.gui.min.js"></script>
+
+        <style>
+            html, body {
+                overflow: hidden;
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
+            #renderCanvas {
+                width: 100%;
+                height: 100%;
+                touch-action: none;
+            }
+        </style>
+    </head>
+<body>
+    <canvas id="renderCanvas"></canvas>
+    <script>
+        var canvas = document.getElementById("renderCanvas");
+
+        var engine = null;
+        var scene = null;
+        var sceneToRender = null;
+        var createDefaultEngine = function() { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true }); };
+        
+        var createScene = function () {
+
+    var scene = new BABYLON.Scene(engine);
+    var ballmaterial = new BABYLON.StandardMaterial("Ball",scene);
+    ballmaterial.diffuseTexture = new BABYLON.Texture("https://live.staticflickr.com/1295/4690051366_37a7f8886f_b.jpg", scene);
+    var groundmaterial = new BABYLON.StandardMaterial("Ground",scene);
+    groundmaterial.diffuseTexture = new BABYLON.Texture("https://thumbs.dreamstime.com/b/green-football-stadium-field-texture-background-95331751.jpg", scene);
+
+    var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, -10), scene);
+    camera.setTarget(BABYLON.Vector3.Zero());
+    camera.attachControl(canvas, true);
+    var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
+    light.intensity = 0.7;
+    light.shadowEnabled = true;
+
+    BABYLON.SceneLoader.ImportMesh("","https://raw.githubusercontent.com/eddicke/kkk/master/","robot.obj", scene, function(goal) {
+        console.log(goal);
+    });
+
+    var sphere = BABYLON.Mesh.CreateSphere("sphere1", 16, 2, scene);
+    sphere.position.y = 1;
+    sphere.receiveShadows = true;
+    sphere.material = ballmaterial;
+    var ground = BABYLON.MeshBuilder.CreateGround("ground",{width: 40, height: 40},scene);
+    ground.receiveShadows = true;
+    ground.material = groundmaterial;
+
+    var VRHelper = scene.createDefaultVRExperience();
+    var targetpositon = BABYLON.Vector3.Zero();
+    function update(){
+        var vrCamera = VRHelper.currentVRCamera;
+        var forward = new BABYLON.Vector3(0, 0, 1);
+        forward = BABYLON.Vector3.TransformCoordinates(forward, vrCamera.getWorldMatrix());
+        var direction = forward.subtract(camera.position);
+        direction = BABYLON.Vector3.Normalize(direction);
+        var Ray = new BABYLON.Ray(camera.position, direction, 100);
+        var hit = scene.pickWithRay(Ray, (mesh) => {
+            if(mesh == ground){
+                return true;
+            }
+            return false;
+            });
+        if(hit.pickedMesh != null)
+            targetpositon = hit.pickedPoint;
+
+            sphere.position = BABYLON.Vector3.Lerp(sphere.position, targetpositon, 0.01);
+            sphere.position.y = 1;
+            
+    }
+
+    scene.registerBeforeRender(function(){
+        update();
+    })
+
+    return scene;
+};
+
+        engine = createDefaultEngine();
+        if (!engine) throw 'engine should not be null.';
+        scene = createScene();
+        sceneToRender = scene;
+
+        engine.runRenderLoop(function () {
+            if (sceneToRender) {
+                sceneToRender.render();
+            }
+        });
+        // Resize
+        window.addEventListener("resize", function () {
+            engine.resize();
+        });
+    </script>
+</body>
+</html>
